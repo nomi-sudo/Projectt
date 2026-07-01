@@ -3,11 +3,14 @@
 import { Star, ShoppingCart, Heart, Eye } from "lucide-react";
 import { motion, useMotionValue, useTransform, useSpring, Variants } from "framer-motion";
 import { useState, useRef } from "react";
-import { useCart } from "@/store/useCart";
 import Image from "next/image";
+import Link from "next/link";
+import { useAuth } from "@/hooks/useAuth";
+import { useCartDB } from "@/hooks/useCartDB";
+import type { Product } from "@/lib/supabase";
 
 interface ProductCardProps {
-  product: any;
+  product: Product;
   index?: number;
 }
 
@@ -17,12 +20,12 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
     show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 130, damping: 20 } }
   };
 
-  const addItem = useCart((state) => state.addItem);
+  const { user } = useAuth();
+  const { addItem } = useCartDB();
   const [liked, setLiked] = useState(false);
   const [added, setAdded] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  /* 3-D tilt */
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const rotateX = useSpring(useTransform(y, [-0.5, 0.5], [8, -8]), { stiffness: 200, damping: 20 });
@@ -38,19 +41,21 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
   };
   const handleMouseLeave = () => { x.set(0); y.set(0); };
 
-  const handleAddToCart = () => {
-    addItem(product);
+  const handleAddToCart = async () => {
+    if (!user) {
+      window.location.href = "/auth";
+      return;
+    }
+    await addItem(product.id, 1);
     setAdded(true);
     setTimeout(() => setAdded(false), 1800);
   };
 
   const stars = Math.round(product.rating);
+  const productImage = product.image ?? "https://via.placeholder.com/400x300?text=No+Image";
 
   return (
-    <motion.div
-      variants={itemVariants}
-      className="perspective-1000 cursor-pointer break-inside-avoid mb-6 inline-block w-full"
-    >
+    <motion.div variants={itemVariants} className="perspective-1000 cursor-pointer break-inside-avoid mb-6 inline-block w-full">
       <motion.div
         ref={cardRef}
         style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
@@ -59,7 +64,6 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
         whileHover={{ z: 20 }}
         className="group relative bg-white rounded-2xl border border-border overflow-visible shadow-md hover:shadow-[0_24px_60px_-12px_rgba(0,122,122,0.28)] transition-shadow duration-300"
       >
-        {/* Glare overlay */}
         <motion.div
           className="absolute inset-0 rounded-2xl pointer-events-none z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
           style={{
@@ -67,23 +71,25 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
           }}
         />
 
-        {/* Image container */}
         <div className="relative aspect-[4/3] bg-muted rounded-t-2xl overflow-hidden">
-          <motion.div
-            whileHover={{ scale: 1.08 }}
-            transition={{ duration: 0.4 }}
-            className="w-full h-full relative p-3"
-            style={{ transformStyle: "preserve-3d", translateZ: 10 }}
-          >
-            <Image
-              src={product.image}
-              alt={product.name}
-              fill
-              className="object-contain p-3"
-            />
-          </motion.div>
+          <Link href={`/product/${product.slug}`}>
+            <motion.div
+              whileHover={{ scale: 1.08 }}
+              transition={{ duration: 0.4 }}
+              className="w-full h-full relative p-3"
+              style={{ transformStyle: "preserve-3d", translateZ: 10 }}
+            >
+              <Image
+                src={productImage}
+                alt={product.name}
+                fill
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                className="object-contain p-3"
+                loading={index < 4 ? "eager" : "lazy"}
+              />
+            </motion.div>
+          </Link>
 
-          {/* Floating badge */}
           <motion.div
             initial={{ opacity: 0, scale: 0 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -91,10 +97,9 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
             className="absolute top-3 left-3 bg-primary text-white text-[9px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full shadow-lg"
             style={{ translateZ: 20 }}
           >
-            In Stock
+            {product.in_stock ? "In Stock" : "Out of Stock"}
           </motion.div>
 
-          {/* Action row — top right */}
           <div className="absolute top-3 right-3 flex flex-col gap-2">
             <motion.button
               whileHover={{ scale: 1.15, rotate: 10 }}
@@ -104,16 +109,17 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
             >
               <Heart className={`w-3.5 h-3.5 ${liked ? "fill-white" : ""}`} />
             </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.15 }}
-              whileTap={{ scale: 0.9 }}
-              className="p-2 bg-white/90 backdrop-blur-sm text-foreground rounded-full shadow-md"
-            >
-              <Eye className="w-3.5 h-3.5" />
-            </motion.button>
+            <Link href={`/product/${product.slug}`}>
+              <motion.button
+                whileHover={{ scale: 1.15 }}
+                whileTap={{ scale: 0.9 }}
+                className="p-2 bg-white/90 backdrop-blur-sm text-foreground rounded-full shadow-md"
+              >
+                <Eye className="w-3.5 h-3.5" />
+              </motion.button>
+            </Link>
           </div>
 
-          {/* Add to cart — slides up on hover */}
           <motion.div
             className="absolute inset-x-0 bottom-0 p-3"
             initial={{ y: "110%" }}
@@ -124,8 +130,9 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
               <motion.button
                 whileTap={{ scale: 0.96 }}
                 onClick={handleAddToCart}
+                disabled={!product.in_stock}
                 className={`btn-shine w-full font-bold py-2.5 rounded-xl flex items-center justify-center gap-2 text-sm shadow-xl transition-colors ${
-                  added ? "bg-green-500 text-white" : "bg-primary hover:bg-primary-dark text-white"
+                  added ? "bg-green-500 text-white" : product.in_stock ? "bg-primary hover:bg-primary-dark text-white" : "bg-gray-300 text-gray-500 cursor-not-allowed"
                 }`}
               >
                 <motion.div
@@ -134,15 +141,13 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
                 >
                   <ShoppingCart className="w-4 h-4" />
                 </motion.div>
-                {added ? "Added!" : "Add to Cart"}
+                {added ? "Added!" : product.in_stock ? "Add to Cart" : "Out of Stock"}
               </motion.button>
             </div>
           </motion.div>
         </div>
 
-        {/* Info */}
         <div className="p-4" style={{ transform: "translateZ(5px)" }}>
-          {/* Stars */}
           <div className="flex items-center gap-1 mb-2">
             {Array.from({ length: 5 }).map((_, i) => (
               <Star key={i} className={`w-3 h-3 ${i < stars ? "fill-amber-400 text-amber-400" : "fill-muted text-muted"}`} />
@@ -150,10 +155,11 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
             <span className="text-[10px] text-muted-foreground ml-1">({product.rating})</span>
           </div>
 
-          {/* Name */}
-          <h3 className="text-sm font-semibold text-foreground line-clamp-2 leading-snug mb-1 group-hover:text-primary transition-colors duration-200 capitalize" style={{ height: "2.6rem" }}>
-            {product.name.toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase())}
-          </h3>
+          <Link href={`/product/${product.slug}`}>
+            <h3 className="text-sm font-semibold text-foreground line-clamp-2 leading-snug mb-1 group-hover:text-primary transition-colors duration-200 capitalize" style={{ height: "2.6rem" }}>
+              {product.name.toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase())}
+            </h3>
+          </Link>
 
           <p className="text-[10px] text-muted-foreground mb-3 uppercase tracking-wider font-semibold">
             {product.subcategory}

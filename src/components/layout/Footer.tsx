@@ -2,8 +2,8 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { CATEGORIES } from "@/constants/categories";
 import { Phone, Mail, MapPin, Globe, Share2, Rss, AtSign } from "lucide-react";
+import { useCategories } from "@/hooks/useProducts";
 
 const socials = [
   { icon: Globe,  href: "#", label: "Facebook"  },
@@ -13,18 +13,16 @@ const socials = [
 ];
 
 export default function Footer() {
+  const { categories, loading } = useCategories();
+
   return (
     <footer className="relative overflow-hidden bg-gray-950 text-white">
-      {/* Decorative gradient top */}
       <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
-
-      {/* Floating orbs */}
       <div className="absolute top-10 right-10 w-64 h-64 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
       <div className="absolute bottom-10 left-10 w-48 h-48 rounded-full bg-accent/10 blur-3xl pointer-events-none" />
 
       <div className="container mx-auto px-4 py-16 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
-          {/* Brand */}
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
             <h2 className="text-2xl font-extrabold tracking-tighter mb-1">
               AL-FATAH <span className="text-accent">MART</span>
@@ -45,24 +43,30 @@ export default function Footer() {
             </div>
           </motion.div>
 
-          {/* Categories */}
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }}>
             <h3 className="font-bold text-sm uppercase tracking-widest text-white/50 mb-5">Departments</h3>
-            <ul className="space-y-2.5">
-              {CATEGORIES.map((cat) => (
-                <li key={cat.name}>
-                  <Link href={`/category/${cat.name.toLowerCase().replace(/ /g, '-')}`}
-                    className="text-white/60 hover:text-accent text-sm flex items-center gap-2 transition-colors group"
-                  >
-                    <span className="w-1 h-1 bg-accent rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-                    {cat.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            {loading ? (
+              <div className="space-y-2.5">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="h-4 w-32 bg-white/10 rounded animate-pulse" />
+                ))}
+              </div>
+            ) : (
+              <ul className="space-y-2.5">
+                {categories.map((cat) => (
+                  <li key={cat.name}>
+                    <Link href={`/category/${cat.slug}`}
+                      className="text-white/60 hover:text-accent text-sm flex items-center gap-2 transition-colors group"
+                    >
+                      <span className="w-1 h-1 bg-accent rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                      {cat.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
           </motion.div>
 
-          {/* Info */}
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.15 }}>
             <h3 className="font-bold text-sm uppercase tracking-widest text-white/50 mb-5">Information</h3>
             <ul className="space-y-2.5">
@@ -74,7 +78,6 @@ export default function Footer() {
             </ul>
           </motion.div>
 
-          {/* Contact */}
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.2 }}>
             <h3 className="font-bold text-sm uppercase tracking-widest text-white/50 mb-5">Contact Us</h3>
             <ul className="space-y-4">
@@ -94,7 +97,6 @@ export default function Footer() {
           </motion.div>
         </div>
 
-        {/* Bottom */}
         <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-white/40">
           <span>&copy; 2026 Al-Fatah Mart. All rights reserved.</span>
           <div className="flex items-center gap-4">
@@ -103,8 +105,8 @@ export default function Footer() {
             ))}
           </div>
           <div className="flex items-center gap-2">
-            {["💳", "🏦", "📱", "💰"].map((icon, i) => (
-              <span key={i} className="w-9 h-6 bg-white/10 rounded flex items-center justify-center text-sm">{icon}</span>
+            {["Card", "Bank", "Mobile", "Cash"].map((label, i) => (
+              <span key={i} className="w-9 h-6 bg-white/10 rounded flex items-center justify-center text-[10px] font-medium">{label}</span>
             ))}
           </div>
         </div>

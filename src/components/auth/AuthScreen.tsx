@@ -5,10 +5,10 @@ import { motion, AnimatePresence, useSpring, useMotionValue } from "framer-motio
 import { Eye, EyeOff, Mail, Lock, User, Phone, ArrowRight, Check, ShoppingBag } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useAuth } from "@/hooks/useAuth";
+import { useRouter } from "next/navigation";
 
-/* ──────────────────────────────────────────────────────────
-   Floating particle background
-────────────────────────────────────────────────────────── */
+/* ── Floating particle background ── */
 function Particles() {
   const particles = Array.from({ length: 18 }, (_, i) => ({
     id: i,
@@ -17,9 +17,7 @@ function Particles() {
     y: Math.random() * 100,
     delay: Math.random() * 5,
     duration: Math.random() * 6 + 7,
-    emoji: ["🥑", "🍊", "🥕", "🍓", "🍋", "🥦", "🍎", "🍇", "🧀", "🥚"][
-      Math.floor(Math.random() * 10)
-    ],
+    emoji: ["🥑", "🍊", "🥕", "🍓", "🍋", "🥦", "🍎", "🍇", "🧀", "🥚"][Math.floor(Math.random() * 10)],
   }));
 
   return (
@@ -49,18 +47,12 @@ function Particles() {
   );
 }
 
-/* ──────────────────────────────────────────────────────────
-   3-D interactive mascot that follows the cursor
-────────────────────────────────────────────────────────── */
+/* ── 3-D interactive mascot ── */
 function Mascot3D() {
   const containerRef = useRef<HTMLDivElement>(null);
   const rotX = useSpring(0, { stiffness: 120, damping: 18 });
   const rotY = useSpring(0, { stiffness: 120, damping: 18 });
   const scaleVal = useMotionValue(1);
-
-  // eye tracking
-  const eyeX = useSpring(0, { stiffness: 200, damping: 25 });
-  const eyeY = useSpring(0, { stiffness: 200, damping: 25 });
 
   const handleMouseMove = (e: MouseEvent) => {
     const el = containerRef.current;
@@ -72,15 +64,11 @@ function Mascot3D() {
     const dy = (e.clientY - cy) / (rect.height / 2);
     rotX.set(-dy * 18);
     rotY.set(dx * 18);
-    eyeX.set(dx * 5);
-    eyeY.set(dy * 4);
   };
 
   const handleMouseLeave = () => {
     rotX.set(0);
     rotY.set(0);
-    eyeX.set(0);
-    eyeY.set(0);
   };
 
   useEffect(() => {
@@ -94,7 +82,6 @@ function Mascot3D() {
 
   return (
     <div ref={containerRef} className="relative flex items-center justify-center select-none">
-      {/* Glow ring */}
       <motion.div
         className="absolute rounded-full w-40 h-40 md:w-56 md:h-56 lg:w-64 lg:h-64"
         style={{
@@ -105,18 +92,13 @@ function Mascot3D() {
         transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
       />
 
-      {/* Shadow under mascot */}
       <motion.div
         className="absolute bottom-2 rounded-full w-24 h-4 md:w-36 md:h-6"
-        style={{
-          background: "rgba(0,0,0,0.15)",
-          filter: "blur(10px)",
-        }}
+        style={{ background: "rgba(0,0,0,0.15)", filter: "blur(10px)" }}
         animate={{ scaleX: [1, 1.06, 1], opacity: [0.5, 0.3, 0.5] }}
         transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
       />
 
-      {/* The card that tilts in 3-D */}
       <motion.div
         style={{
           rotateX: rotX,
@@ -142,17 +124,15 @@ function Mascot3D() {
           style={{ filter: "drop-shadow(0 20px 30px rgba(0,122,122,0.35))" }}
         />
 
-        {/* Floating badge: "Welcome!" */}
         <motion.div
           className="absolute -top-3 -right-6 bg-white rounded-2xl shadow-xl px-3 py-1.5 text-xs font-bold text-primary border border-primary/10 whitespace-nowrap"
           style={{ translateZ: 30 }}
           animate={{ y: [0, -5, 0], rotate: [0, 3, 0] }}
           transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
         >
-          👋 Welcome!
+          Welcome!
         </motion.div>
 
-        {/* Floating badge: cart */}
         <motion.div
           className="absolute -bottom-1 -left-7 bg-accent rounded-2xl shadow-xl px-3 py-1.5 text-xs font-bold text-white whitespace-nowrap flex items-center gap-1.5"
           style={{ translateZ: 30 }}
@@ -167,9 +147,7 @@ function Mascot3D() {
   );
 }
 
-/* ──────────────────────────────────────────────────────────
-   Input Field
-────────────────────────────────────────────────────────── */
+/* ── Input Field ── */
 interface InputFieldProps {
   id: string;
   label: string;
@@ -228,10 +206,10 @@ function InputField({ id, label, type, placeholder, icon, value, onChange, error
   );
 }
 
-/* ──────────────────────────────────────────────────────────
-   Sign In Form
-────────────────────────────────────────────────────────── */
+/* ── Sign In Form ── */
 function SignInForm({ onSwitch }: { onSwitch: () => void }) {
+  const { signIn } = useAuth();
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
@@ -254,13 +232,24 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
     if (Object.keys(e).length) { setErrors(e); return; }
     setErrors({});
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1800));
-    setLoading(false);
-    setSuccess(true);
+    try {
+      await signIn(email, password);
+      setSuccess(true);
+      setTimeout(() => router.push("/"), 800);
+    } catch (err: any) {
+      setErrors({ general: err.message ?? "Sign in failed" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+      {errors.general && (
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-xs font-medium bg-red-50 p-2 rounded-lg">
+          {errors.general}
+        </motion.p>
+      )}
       <InputField
         id="signin-email"
         label="Email Address"
@@ -334,19 +323,17 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
         )}
       </AnimatePresence>
 
-      {/* Divider */}
       <div className="relative flex items-center gap-3">
         <div className="flex-1 border-t border-gray-200" />
         <span className="text-xs text-gray-400 font-medium">or continue with</span>
         <div className="flex-1 border-t border-gray-200" />
       </div>
 
-      {/* Social buttons */}
       <div className="grid grid-cols-2 gap-3">
         {[
-          { label: "Google", emoji: "🇬", color: "hover:border-red-300" },
-          { label: "Facebook", emoji: "🇫", color: "hover:border-blue-300" },
-        ].map(({ label, emoji, color }) => (
+          { label: "Google", color: "hover:border-red-300" },
+          { label: "Facebook", color: "hover:border-blue-300" },
+        ].map(({ label, color }) => (
           <motion.button
             key={label}
             type="button"
@@ -370,10 +357,10 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
   );
 }
 
-/* ──────────────────────────────────────────────────────────
-   Sign Up Form
-────────────────────────────────────────────────────────── */
+/* ── Sign Up Form ── */
 function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
+  const { signUp } = useAuth();
+  const router = useRouter();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -415,13 +402,24 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
     if (Object.keys(e).length) { setErrors(e); return; }
     setErrors({});
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 2000));
-    setLoading(false);
-    setSuccess(true);
+    try {
+      await signUp(email, password, { name, phone });
+      setSuccess(true);
+      setTimeout(() => router.push("/"), 1200);
+    } catch (err: any) {
+      setErrors({ general: err.message ?? "Sign up failed" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+      {errors.general && (
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-xs font-medium bg-red-50 p-2 rounded-lg">
+          {errors.general}
+        </motion.p>
+      )}
       <div className="grid grid-cols-2 gap-3">
         <InputField
           id="signup-name"
@@ -482,9 +480,7 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
               {[1, 2, 3, 4].map((i) => (
                 <motion.div
                   key={i}
-                  className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
-                    i <= strength ? strengthColor : "bg-gray-200"
-                  }`}
+                  className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${i <= strength ? strengthColor : "bg-gray-200"}`}
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: 1 }}
                 />
@@ -534,7 +530,7 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
             className="flex items-center justify-center gap-3 py-3.5 bg-green-50 border border-green-200 rounded-2xl text-green-700 font-semibold text-sm"
           >
             <Check className="w-5 h-5" />
-            Account created! Welcome aboard 🎉
+            Account created! Welcome aboard
           </motion.div>
         ) : (
           <motion.button
@@ -568,15 +564,12 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
   );
 }
 
-/* ──────────────────────────────────────────────────────────
-   Main exported component
-────────────────────────────────────────────────────────── */
+/* ── Main exported component ── */
 export default function AuthScreen() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
 
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden px-4 py-10">
-      {/* Gradient background */}
       <div
         className="absolute inset-0 -z-10"
         style={{
@@ -585,16 +578,13 @@ export default function AuthScreen() {
         }}
       />
 
-      {/* Floating food particles */}
       <Particles />
 
-      {/* Decorative blobs */}
       <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full opacity-25 -z-10"
         style={{ background: "radial-gradient(circle, #007a7a 0%, transparent 70%)" }} />
       <div className="absolute -bottom-40 -right-40 w-96 h-96 rounded-full opacity-20 -z-10"
         style={{ background: "radial-gradient(circle, #ff7700 0%, transparent 70%)" }} />
 
-      {/* Card */}
       <motion.div
         initial={{ opacity: 0, y: 32 }}
         animate={{ opacity: 1, y: 0 }}
@@ -603,7 +593,6 @@ export default function AuthScreen() {
         style={{ boxShadow: "0 32px 80px rgba(0,122,122,0.12), 0 8px 24px rgba(0,0,0,0.06)" }}
       >
         <div className="grid md:grid-cols-2">
-          {/* ── Left panel: mascot + brand ── */}
           <div
             className="relative hidden md:flex flex-col items-center justify-center p-10 overflow-hidden"
             style={{
@@ -611,13 +600,11 @@ export default function AuthScreen() {
                 "linear-gradient(160deg, #007a7a 0%, #00a3a3 55%, #005757 100%)",
             }}
           >
-            {/* Inner glow circles */}
             <div className="absolute top-10 right-10 w-32 h-32 rounded-full opacity-15"
               style={{ background: "radial-gradient(circle, white 0%, transparent 70%)" }} />
             <div className="absolute bottom-16 left-6 w-24 h-24 rounded-full opacity-10"
               style={{ background: "radial-gradient(circle, #ff7700 0%, transparent 70%)" }} />
 
-            {/* Brand */}
             <motion.div
               initial={{ opacity: 0, y: -16 }}
               animate={{ opacity: 1, y: 0 }}
@@ -633,10 +620,8 @@ export default function AuthScreen() {
               </p>
             </motion.div>
 
-            {/* 3D Mascot */}
             <Mascot3D />
 
-            {/* Feature pills */}
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
@@ -659,16 +644,13 @@ export default function AuthScreen() {
             </motion.div>
           </div>
 
-          {/* ── Right panel: form ── */}
           <div className="p-8 md:p-10 flex flex-col justify-center">
-            {/* Mobile brand */}
             <div className="flex md:hidden items-center gap-2 mb-6">
               <span className="text-primary text-xl font-extrabold tracking-tighter font-heading">
                 AL-FATAH<span className="text-accent"> MART</span>
               </span>
             </div>
 
-            {/* Tab switcher */}
             <div className="flex bg-gray-100 p-1 rounded-2xl mb-7 relative">
               <motion.div
                 className="absolute top-1 bottom-1 rounded-xl bg-white shadow-md"
@@ -688,7 +670,6 @@ export default function AuthScreen() {
               ))}
             </div>
 
-            {/* Animated form */}
             <AnimatePresence mode="wait">
               <motion.div
                 key={mode}
@@ -699,7 +680,7 @@ export default function AuthScreen() {
               >
                 <div className="mb-6">
                   <h3 className="text-2xl font-extrabold text-gray-900 font-heading">
-                    {mode === "signin" ? "Welcome back! 👋" : "Join us today! 🎉"}
+                    {mode === "signin" ? "Welcome back!" : "Join us today!"}
                   </h3>
                   <p className="text-gray-500 text-sm mt-1">
                     {mode === "signin"
@@ -719,7 +700,6 @@ export default function AuthScreen() {
         </div>
       </motion.div>
 
-      {/* Back to home link */}
       <motion.div
         className="absolute top-6 left-6"
         initial={{ opacity: 0 }}
@@ -730,7 +710,7 @@ export default function AuthScreen() {
           href="/"
           className="flex items-center gap-2 text-sm text-gray-500 hover:text-primary font-semibold transition-colors bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full border border-gray-200 shadow-sm"
         >
-          ← Back to Store
+          Back to Store
         </Link>
       </motion.div>
     </div>

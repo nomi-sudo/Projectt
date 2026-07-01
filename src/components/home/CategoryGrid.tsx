@@ -1,21 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { CATEGORIES } from "@/constants/categories";
-import { ArrowRight, ShoppingBag, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { motion, useMotionValue, useTransform, useSpring } from "framer-motion";
 import { useRef } from "react";
+import { useCategories } from "@/hooks/useProducts";
 
-const categoryMeta: Record<string, { emoji: string; color: string; bg: string; glow: string }> = {
-  "Grocery":     { emoji: "🥦", color: "from-emerald-500 to-teal-600",   bg: "bg-emerald-50",  glow: "rgba(16,185,129,0.4)" },
-  "Non-Grocery": { emoji: "🧴", color: "from-blue-500 to-indigo-600",    bg: "bg-blue-50",     glow: "rgba(99,102,241,0.4)" },
-  "Perfume":     { emoji: "🌸", color: "from-orange-400 to-rose-500",    bg: "bg-orange-50",   glow: "rgba(249,115,22,0.4)" },
-  "Skin Care":   { emoji: "✨", color: "from-pink-400 to-fuchsia-500",   bg: "bg-pink-50",     glow: "rgba(236,72,153,0.4)" },
-  "Baby":        { emoji: "🍼", color: "from-sky-400 to-cyan-500",       bg: "bg-sky-50",      glow: "rgba(14,165,233,0.4)" },
+const categoryMeta: Record<string, { emoji: string; color: string }> = {
+  "Grocery": { emoji: "🥦", color: "from-emerald-500 to-teal-600" },
+  "Non-Grocery": { emoji: "🧴", color: "from-blue-500 to-indigo-600" },
+  "Perfume": { emoji: "🌸", color: "from-orange-400 to-rose-500" },
+  "Skin Care": { emoji: "✨", color: "from-pink-400 to-fuchsia-500" },
+  "Baby": { emoji: "🍼", color: "from-sky-400 to-cyan-500" },
 };
 
-function CategoryCard({ category, index }: { category: typeof CATEGORIES[0]; index: number }) {
-  const meta = categoryMeta[category.name] ?? { emoji: "🛒", color: "from-gray-400 to-gray-600", bg: "bg-gray-50", glow: "rgba(100,100,100,0.3)" };
+const glowMap: Record<string, string> = {
+  "Grocery": "rgba(16,185,129,0.4)",
+  "Non-Grocery": "rgba(99,102,241,0.4)",
+  "Perfume": "rgba(249,115,22,0.4)",
+  "Skin Care": "rgba(236,72,153,0.4)",
+  "Baby": "rgba(14,165,233,0.4)",
+};
+
+function CategoryCard({ category, index }: { category: { name: string; slug: string; subcategories: string[] }; index: number }) {
+  const meta = categoryMeta[category.name] ?? { emoji: "🛒", color: "from-gray-400 to-gray-600" };
+  const glow = glowMap[category.name] ?? "rgba(100,100,100,0.3)";
   const cardRef = useRef<HTMLAnchorElement>(null);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -33,7 +42,7 @@ function CategoryCard({ category, index }: { category: typeof CATEGORIES[0]; ind
   return (
     <motion.a
       ref={cardRef}
-      href={`/category/${category.name.toLowerCase().replace(/ /g, '-')}`}
+      href={`/category/${category.slug}`}
       initial={{ opacity: 0, y: 50, scale: 0.9 }}
       whileInView={{ opacity: 1, y: 0, scale: 1 }}
       viewport={{ once: true, margin: "-30px" }}
@@ -43,10 +52,8 @@ function CategoryCard({ category, index }: { category: typeof CATEGORIES[0]; ind
       onMouseLeave={onLeave}
       className="perspective-800 group relative h-72 rounded-3xl overflow-hidden cursor-pointer block"
     >
-      {/* Background gradient */}
       <div className={`absolute inset-0 bg-gradient-to-br ${meta.color} opacity-90`} />
 
-      {/* Animated mesh circles */}
       <motion.div
         className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/15"
         animate={{ scale: [1, 1.2, 1], rotate: [0, 90, 0] }}
@@ -58,14 +65,11 @@ function CategoryCard({ category, index }: { category: typeof CATEGORIES[0]; ind
         transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
       />
 
-      {/* Grid lines for depth */}
       <div className="absolute inset-0 opacity-10"
         style={{ backgroundImage: "linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px)", backgroundSize: "30px 30px" }}
       />
 
-      {/* Content */}
       <div className="absolute inset-0 p-7 flex flex-col justify-between" style={{ transformStyle: "preserve-3d" }}>
-        {/* Top: emoji + subcategory count */}
         <div className="flex items-start justify-between">
           <motion.div
             style={{ translateZ: 30 }}
@@ -80,7 +84,6 @@ function CategoryCard({ category, index }: { category: typeof CATEGORIES[0]; ind
           </span>
         </div>
 
-        {/* Bottom: name + arrow */}
         <div style={{ transform: "translateZ(20px)" }}>
           <h3 className="text-2xl font-extrabold text-white mb-1 drop-shadow-md">{category.name}</h3>
           <div className="flex items-center gap-2">
@@ -96,10 +99,9 @@ function CategoryCard({ category, index }: { category: typeof CATEGORIES[0]; ind
         </div>
       </div>
 
-      {/* Hover glow */}
       <motion.div
         className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-        style={{ boxShadow: `0 0 60px 10px ${meta.glow}` }}
+        style={{ boxShadow: `0 0 60px 10px ${glow}` }}
       />
     </motion.a>
   );
@@ -111,13 +113,13 @@ const containerVariants = {
 };
 
 export default function CategoryGrid() {
+  const { categories, loading } = useCategories();
+
   return (
     <section className="py-20 relative overflow-hidden">
-      {/* Section BG */}
       <div className="absolute inset-0 bg-gradient-to-b from-background via-muted/30 to-background pointer-events-none" />
 
       <div className="container mx-auto px-4 relative z-10">
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -142,18 +144,25 @@ export default function CategoryGrid() {
           </Link>
         </motion.div>
 
-        {/* Grid */}
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5 perspective-1000"
-        >
-          {CATEGORIES.map((category, i) => (
-            <CategoryCard key={category.name} category={category} index={i} />
-          ))}
-        </motion.div>
+        {loading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-72 rounded-3xl bg-muted animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5 perspective-1000"
+          >
+            {categories.map((category, i) => (
+              <CategoryCard key={category.slug} category={category} index={i} />
+            ))}
+          </motion.div>
+        )}
       </div>
     </section>
   );

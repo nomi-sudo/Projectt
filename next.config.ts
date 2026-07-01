@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "alfatah.pk",
+      },
+      {
+        protocol: "https",
+        hostname: "via.placeholder.com",
       }
     ],
   },
